@@ -3,64 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Portfolio Rebalancer</title>
+    <title>Portfolio Rebalancer Agent</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .container { max-width: 800px; margin-top: 2rem; }
-        .card { margin-bottom: 1rem; }
-        .slider-container { margin: 1rem 0; }
+        body { background-color: #f8f9fa; }
+        .container { max-width: 1200px; margin-top: 1rem; }
+        .card { margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .slider-container { margin: 0.5rem 0; }
         #connectButton { margin-bottom: 1rem; }
+        .portfolio-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .token-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        .token-info:last-child { border-bottom: none; }
+        .token-amount { font-weight: bold; }
+        .token-price { color: #666; }
+        .token-value { color: #28a745; }
+        .progress { height: 0.5rem; }
+        .action-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        .action-item:last-child { border-bottom: none; }
+        .action-type { font-weight: bold; }
+        .action-buy { color: #28a745; }
+        .action-sell { color: #dc3545; }
+        .wallet-info {
+            background-color: #f8f9fa;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 class="mb-4">Crypto Portfolio Rebalancer</h1>
-        
-        <div id="walletSection">
-            <button id="connectButton" class="btn btn-primary">Connect MetaMask</button>
-            <div id="walletInfo" style="display: none;">
-                <p>Connected: <span id="walletAddress"></span></p>
-                <button id="disconnectButton" class="btn btn-outline-secondary">Disconnect</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Current Portfolio</h5>
-                <div id="portfolioInfo">
-                    <p>Connect your wallet to view portfolio</p>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>Portfolio Rebalancer Agent</h1>
+            <div id="walletSection">
+                <button id="connectButton" class="btn btn-primary">Connect MetaMask</button>
+                <div id="walletInfo" style="display: none;" class="wallet-info">
+                    <span>Connected: <span id="walletAddress"></span></span>
+                    <button id="disconnectButton" class="btn btn-outline-secondary btn-sm ms-2">Disconnect</button>
                 </div>
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Target Allocations</h5>
-                <div class="slider-container">
-                    <label for="btcSlider">BTC: <span id="btcValue">50</span>%</label>
-                    <input type="range" class="form-range" id="btcSlider" min="0" max="100" value="50">
-                </div>
-                <div class="slider-container">
-                    <label for="ethSlider">ETH: <span id="ethValue">30</span>%</label>
-                    <input type="range" class="form-range" id="ethSlider" min="0" max="100" value="30">
-                </div>
-                <div class="slider-container">
-                    <label for="solSlider">SOL: <span id="solValue">20</span>%</label>
-                    <input type="range" class="form-range" id="solSlider" min="0" max="100" value="20">
-                </div>
-                <button id="generatePlanButton" class="btn btn-primary" disabled>Generate Rebalancing Plan</button>
-                <div id="rebalancingPlan" style="display: none;">
-                    <h6 class="mt-3">Rebalancing Plan</h6>
-                    <div id="planDetails"></div>
-                    <button id="confirmPlanButton" class="btn btn-success mt-2">Confirm and Execute</button>
-                </div>
-                <div id="transactionProgress" style="display: none;">
-                    <h6 class="mt-3">Transaction Progress</h6>
-                    <div class="progress mb-2">
-                        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+        <div class="portfolio-grid">
+            <!-- Left Column: Portfolio and Allocations -->
+            <div>
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Current Portfolio</h5>
+                        <div id="portfolioInfo">
+                            <p>Connect your wallet to view portfolio</p>
+                        </div>
                     </div>
-                    <div id="currentAction"></div>
-                    <button id="confirmTransactionButton" class="btn btn-success mt-2">Confirm Transaction</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Target Allocations</h5>
+                        <div class="slider-container">
+                            <label for="btcSlider">BTC: <span id="btcValue">50</span>%</label>
+                            <input type="range" class="form-range" id="btcSlider" min="0" max="100" value="50">
+                        </div>
+                        <div class="slider-container">
+                            <label for="ethSlider">ETH: <span id="ethValue">30</span>%</label>
+                            <input type="range" class="form-range" id="ethSlider" min="0" max="100" value="30">
+                        </div>
+                        <div class="slider-container">
+                            <label for="solSlider">SOL: <span id="solValue">20</span>%</label>
+                            <input type="range" class="form-range" id="solSlider" min="0" max="100" value="20">
+                        </div>
+                        <button id="generatePlanButton" class="btn btn-primary w-100" disabled>Generate Rebalancing Plan</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Rebalancing Plan -->
+            <div>
+                <div id="rebalancingPlan" style="display: none;" class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Rebalancing Plan</h5>
+                        <div id="planDetails"></div>
+                        <button id="confirmPlanButton" class="btn btn-success w-100 mt-2">Confirm and Execute</button>
+                    </div>
+                </div>
+
+                <div id="transactionProgress" style="display: none;" class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Transaction Progress</h5>
+                        <div class="progress mb-2">
+                            <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <div id="currentAction"></div>
+                        <button id="confirmTransactionButton" class="btn btn-success w-100 mt-2">Confirm Transaction</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -189,12 +236,16 @@
                 
                 let portfolioHtml = '<div class="list-group">';
                 
-                // Display token data
+                // Display token data with prices
                 for (const [token, data] of Object.entries(portfolio)) {
                     if (token !== 'total_value') {
                         portfolioHtml += `
-                            <div class="list-group-item">
-                                ${token}: ${data.amount} (${data.value} USD)
+                            <div class="token-info">
+                                <div>
+                                    <span class="token-amount">${token}: ${data.amount}</span>
+                                    <span class="token-price">($${data.price} USD)</span>
+                                </div>
+                                <span class="token-value">$${data.value} USD</span>
                             </div>
                         `;
                     }
@@ -202,8 +253,9 @@
                 
                 // Display total value separately
                 portfolioHtml += `
-                    <div class="list-group-item">
-                        <strong>Total Portfolio Value:</strong> ${portfolio.total_value} USD
+                    <div class="token-info">
+                        <span class="token-amount">Total Portfolio Value:</span>
+                        <span class="token-value">$${portfolio.total_value} USD</span>
                     </div>
                 `;
                 
@@ -285,11 +337,11 @@
 
             let planHtml = '<div class="list-group">';
             rebalancingPlan.forEach((action, index) => {
+                const actionClass = action.action === 'buy' ? 'action-buy' : 'action-sell';
                 planHtml += `
-                    <div class="list-group-item">
-                        <strong>Action ${index + 1}:</strong> ${action.action.toUpperCase()} ${action.amount_usd.toFixed(2)} USD worth of ${action.token}
-                        <br>
-                        <small>Current: ${action.current_value.toFixed(2)} USD, Target: ${action.target_value.toFixed(2)} USD</small>
+                    <div class="action-item">
+                        <div class="action-type ${actionClass}">${action.action.toUpperCase()} ${action.amount_usd.toFixed(2)} USD worth of ${action.token}</div>
+                        <small>Current: $${action.current_value.toFixed(2)} USD, Target: $${action.target_value.toFixed(2)} USD</small>
                     </div>
                 `;
             });
