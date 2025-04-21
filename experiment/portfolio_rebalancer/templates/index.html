@@ -362,10 +362,21 @@
             if (!window.currentTransaction) return;
 
             try {
+                // Convert transaction data to the format expected by MetaMask
+                const txParams = {
+                    from: window.currentTransaction.from,
+                    to: window.currentTransaction.to,
+                    value: window.currentTransaction.value.toString(),
+                    gas: window.currentTransaction.gas.toString(),
+                    gasPrice: window.currentTransaction.gasPrice.toString(),
+                    nonce: window.currentTransaction.nonce.toString(),
+                    chainId: window.currentTransaction.chainId.toString()
+                };
+
                 // Send transaction through MetaMask
                 const txHash = await window.ethereum.request({
                     method: 'eth_sendTransaction',
-                    params: [window.currentTransaction]
+                    params: [txParams]
                 });
 
                 // Wait for transaction to be mined

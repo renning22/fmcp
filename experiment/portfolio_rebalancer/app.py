@@ -322,6 +322,9 @@ def rebalance_portfolio():
         
         if not address or not w3.is_address(address):
             return jsonify({'error': 'Invalid address'}), 400
+            
+        # Convert to checksum address
+        address = w3.to_checksum_address(address)
         
         if not target_allocations:
             return jsonify({'error': 'No target allocations provided'}), 400
