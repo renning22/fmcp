@@ -99,7 +99,7 @@ def calculate_rebalancing_plan(current_portfolio: Dict, target_allocations: Dict
     Returns:
         List of rebalancing actions to take
     """
-    total_value = current_portfolio['total_value']
+    total_value = Decimal(str(current_portfolio['total_value']))
     actions = []
     
     # Calculate target values for each token
@@ -110,16 +110,16 @@ def calculate_rebalancing_plan(current_portfolio: Dict, target_allocations: Dict
     
     # Calculate current values
     current_values = {
-        token: data['value']
+        token: Decimal(str(data['value']))
         for token, data in current_portfolio.items()
         if token != 'total_value'
     }
     
     # Calculate differences and create actions
     for token in target_values.keys():
-        current_value = current_values.get(token, 0)
+        current_value = current_values.get(token, Decimal('0'))
         target_value = target_values[token]
-        difference = target_value - Decimal(str(current_value))
+        difference = target_value - current_value
         
         if abs(difference) > Decimal('0.01'):  # Only create action if difference is significant
             action = {
@@ -327,13 +327,11 @@ def rebalance_portfolio():
             return jsonify({'error': 'No target allocations provided'}), 400
         
         # Get current portfolio
-        portfolio_response = get_portfolio()
-        if isinstance(portfolio_response, tuple):
-            portfolio_response = portfolio_response[0]
+        portfolio_response = app.test_client().get(f'/api/portfolio?address={address}')
         current_portfolio = portfolio_response.get_json()
         
         # Check if portfolio data is valid
-        if not current_portfolio or 'total_value' not in current_portfolio:
+        if not current_portfolio or 'error' in current_portfolio:
             return jsonify({'error': 'Failed to get portfolio data'}), 500
             
         if action_index == -1:
