@@ -48,7 +48,20 @@
                     <label for="solSlider">SOL: <span id="solValue">20</span>%</label>
                     <input type="range" class="form-range" id="solSlider" min="0" max="100" value="20">
                 </div>
-                <button id="rebalanceButton" class="btn btn-success" disabled>Rebalance Portfolio</button>
+                <button id="generatePlanButton" class="btn btn-primary" disabled>Generate Rebalancing Plan</button>
+                <div id="rebalancingPlan" style="display: none;">
+                    <h6 class="mt-3">Rebalancing Plan</h6>
+                    <div id="planDetails"></div>
+                    <button id="confirmPlanButton" class="btn btn-success mt-2">Confirm and Execute</button>
+                </div>
+                <div id="transactionProgress" style="display: none;">
+                    <h6 class="mt-3">Transaction Progress</h6>
+                    <div class="progress mb-2">
+                        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="currentAction"></div>
+                    <button id="confirmTransactionButton" class="btn btn-success mt-2">Confirm Transaction</button>
+                </div>
             </div>
         </div>
     </div>
@@ -58,6 +71,8 @@
     <script>
         let web3;
         let currentAccount = null;
+        let rebalancingPlan = null;
+        let currentActionIndex = 0;
 
         // Initialize Web3
         if (typeof window.ethereum !== 'undefined') {
@@ -109,7 +124,7 @@
                     document.getElementById('walletAddress').textContent = `${currentAccount.substring(0, 6)}...${currentAccount.substring(38)}`;
                     document.getElementById('walletInfo').style.display = 'block';
                     document.getElementById('connectButton').style.display = 'none';
-                    document.getElementById('rebalanceButton').disabled = false;
+                    document.getElementById('generatePlanButton').disabled = false;
                     
                     // Display wallet information
                     let walletInfoHtml = `
@@ -147,7 +162,7 @@
             currentAccount = null;
             document.getElementById('walletInfo').style.display = 'none';
             document.getElementById('connectButton').style.display = 'block';
-            document.getElementById('rebalanceButton').disabled = true;
+            document.getElementById('generatePlanButton').disabled = true;
             document.getElementById('portfolioInfo').innerHTML = '<p>Connect your wallet to view portfolio</p>';
         });
 
@@ -199,9 +214,12 @@
             }
         }
 
-        // Rebalance portfolio
-        document.getElementById('rebalanceButton').addEventListener('click', async () => {
-            if (!currentAccount) return;
+        // Generate rebalancing plan
+        document.getElementById('generatePlanButton').addEventListener('click', async () => {
+            if (!currentAccount) {
+                alert('Please connect your wallet first');
+                return;
+            }
 
             const allocations = {
                 BTC: parseInt(document.getElementById('btcValue').textContent),
@@ -210,6 +228,25 @@
             };
 
             try {
+                // First get the current portfolio
+                console.log('Fetching portfolio for address:', currentAccount);
+                const portfolioResponse = await fetch(`/api/portfolio?address=${currentAccount}`);
+                const portfolioData = await portfolioResponse.json();
+                
+                if (!portfolioResponse.ok) {
+                    console.error('Portfolio fetch error:', portfolioData);
+                    throw new Error(portfolioData.error || 'Failed to get portfolio data');
+                }
+                
+                if (!portfolioData || !portfolioData.total_value) {
+                    console.error('Invalid portfolio data:', portfolioData);
+                    throw new Error('Invalid portfolio data received');
+                }
+
+                console.log('Portfolio data received:', portfolioData);
+
+                // Then generate the rebalancing plan
+                console.log('Generating rebalancing plan with allocations:', allocations);
                 const response = await fetch('/api/rebalance', {
                     method: 'POST',
                     headers: {
@@ -222,15 +259,126 @@
                 });
 
                 const result = await response.json();
-                if (result.status === 'success') {
-                    alert('Rebalancing transaction prepared!');
-                    fetchPortfolio();
+                console.log('Rebalance response:', result);
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to generate plan');
+                }
+
+                if (result.status === 'plan_ready') {
+                    rebalancingPlan = result.actions;
+                    displayRebalancingPlan();
                 } else {
-                    alert('Error: ' + result.error);
+                    throw new Error(result.error || 'Failed to generate plan');
                 }
             } catch (error) {
-                console.error('Error rebalancing:', error);
-                alert('Error rebalancing portfolio');
+                console.error('Error in rebalancing process:', error);
+                alert('Error: ' + error.message + '\n\nPlease check the console for more details.');
+            }
+        });
+
+        function displayRebalancingPlan() {
+            if (!rebalancingPlan || rebalancingPlan.length === 0) {
+                alert('No rebalancing actions needed');
+                return;
+            }
+
+            let planHtml = '<div class="list-group">';
+            rebalancingPlan.forEach((action, index) => {
+                planHtml += `
+                    <div class="list-group-item">
+                        <strong>Action ${index + 1}:</strong> ${action.action.toUpperCase()} ${action.amount_usd.toFixed(2)} USD worth of ${action.token}
+                        <br>
+                        <small>Current: ${action.current_value.toFixed(2)} USD, Target: ${action.target_value.toFixed(2)} USD</small>
+                    </div>
+                `;
+            });
+            planHtml += '</div>';
+            
+            document.getElementById('planDetails').innerHTML = planHtml;
+            document.getElementById('rebalancingPlan').style.display = 'block';
+        }
+
+        // Confirm and execute plan
+        document.getElementById('confirmPlanButton').addEventListener('click', async () => {
+            document.getElementById('rebalancingPlan').style.display = 'none';
+            document.getElementById('transactionProgress').style.display = 'block';
+            currentActionIndex = 0;
+            executeNextAction();
+        });
+
+        async function executeNextAction() {
+            if (currentActionIndex >= rebalancingPlan.length) {
+                document.getElementById('transactionProgress').style.display = 'none';
+                alert('Rebalancing completed!');
+                fetchPortfolio();
+                return;
+            }
+
+            const progress = (currentActionIndex / rebalancingPlan.length) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+            document.getElementById('currentAction').innerHTML = `
+                <div class="alert alert-info">
+                    Action ${currentActionIndex + 1} of ${rebalancingPlan.length}: 
+                    ${rebalancingPlan[currentActionIndex].action.toUpperCase()} 
+                    ${rebalancingPlan[currentActionIndex].amount_usd.toFixed(2)} USD worth of 
+                    ${rebalancingPlan[currentActionIndex].token}
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/rebalance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        address: currentAccount,
+                        allocations: {
+                            BTC: parseInt(document.getElementById('btcValue').textContent),
+                            ETH: parseInt(document.getElementById('ethValue').textContent),
+                            SOL: parseInt(document.getElementById('solValue').textContent)
+                        },
+                        action_index: currentActionIndex
+                    })
+                });
+
+                const result = await response.json();
+                if (result.status === 'transaction_ready') {
+                    // Store transaction for confirmation
+                    window.currentTransaction = result.transaction;
+                    document.getElementById('confirmTransactionButton').disabled = false;
+                } else {
+                    throw new Error(result.error || 'Failed to prepare transaction');
+                }
+            } catch (error) {
+                console.error('Error preparing transaction:', error);
+                alert('Error preparing transaction: ' + error.message);
+            }
+        }
+
+        // Confirm and send transaction
+        document.getElementById('confirmTransactionButton').addEventListener('click', async () => {
+            if (!window.currentTransaction) return;
+
+            try {
+                // Send transaction through MetaMask
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [window.currentTransaction]
+                });
+
+                // Wait for transaction to be mined
+                const receipt = await web3.eth.waitForTransactionReceipt(txHash);
+                if (receipt.status) {
+                    currentActionIndex++;
+                    executeNextAction();
+                } else {
+                    throw new Error('Transaction failed');
+                }
+            } catch (error) {
+                console.error('Error sending transaction:', error);
+                alert('Error sending transaction: ' + error.message);
             }
         });
     </script>
