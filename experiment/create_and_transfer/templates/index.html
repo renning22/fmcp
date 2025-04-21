@@ -51,18 +51,36 @@
             background-color: #e3f2fd;
             color: #1565c0;
         }
+        .wallet-info {
+            background-color: #fff3e0;
+            color: #e65100;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>MetaMask Transaction</h1>
         <div id="status"></div>
-        <button id="sendTx" disabled>Send Transaction</button>
+        <button id="generateWallet">Generate New Wallet</button>
+        <div id="walletInfo" class="wallet-info" style="display: none;">
+            <h3>New Wallet Information</h3>
+            <p><strong>Address:</strong> <span id="newAddress"></span></p>
+            <p><strong>Private Key:</strong> <span id="privateKey"></span></p>
+            <p><strong>Warning:</strong> Keep your private key secure and never share it!</p>
+        </div>
+        <button id="sendTx" disabled>Send 0.01 ETH to New Wallet</button>
     </div>
 
     <script>
         const statusDiv = document.getElementById('status');
         const sendButton = document.getElementById('sendTx');
+        const generateWalletButton = document.getElementById('generateWallet');
+        const walletInfoDiv = document.getElementById('walletInfo');
+        let newWalletAddress = '';
 
         // Check if MetaMask is installed
         if (typeof window.ethereum === 'undefined') {
@@ -70,9 +88,29 @@
             statusDiv.textContent = 'MetaMask is not installed. Please install MetaMask to use this application.';
         } else {
             statusDiv.className = 'info';
-            statusDiv.textContent = 'MetaMask is installed. Click the button to connect and send a transaction.';
-            sendButton.disabled = false;
+            statusDiv.textContent = 'MetaMask is installed. Generate a new wallet and send ETH to it.';
         }
+
+        generateWalletButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/generate-wallet', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                newWalletAddress = data.address;
+                document.getElementById('newAddress').textContent = data.address;
+                document.getElementById('privateKey').textContent = data.privateKey;
+                walletInfoDiv.style.display = 'block';
+                
+                statusDiv.className = 'success';
+                statusDiv.textContent = 'New wallet generated successfully!';
+                sendButton.disabled = false;
+            } catch (error) {
+                statusDiv.className = 'error';
+                statusDiv.textContent = `Failed to generate wallet: ${error.message}`;
+            }
+        });
 
         sendButton.addEventListener('click', async () => {
             try {
@@ -84,11 +122,10 @@
                 statusDiv.className = 'info';
                 statusDiv.textContent = `Connected to account: ${from}`;
 
-                const to = '0xRecipientAddress'; // Replace with the recipient's address
                 const amount = '0.01'; // Amount in ETH
 
                 const transactionParameters = {
-                    to: to,
+                    to: newWalletAddress,
                     from: from,
                     value: Web3.utils.toHex(Web3.utils.toWei(amount, 'ether')),
                 };
