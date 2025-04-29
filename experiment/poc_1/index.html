@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Training Demo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>Agent Training Demo (Forge Simulation)</h1>
+
+    <div class="container">
+        <h2>1. Define Action Step</h2>
+        <label for="action-type">Select Action Type:</label>
+        <select id="action-type">
+            <option value="" disabled selected>-- Select Action --</option>
+            <option value="approve">Approve Token</option>
+            <option value="swap">Swap Tokens</option>
+            <option value="deposit">Deposit Token</option>
+        </select>
+
+        <div id="params-container">
+            <!-- Parameters will be rendered here by JS -->
+        </div>
+
+        <button id="log-step-btn" disabled>Log This Step</button>
+    </div>
+
+    <div class="container">
+        <h2>2. Current Action Sequence</h2>
+        <ol id="sequence-list">
+            <!-- Logged steps will appear here -->
+        </ol>
+    </div>
+
+    <div class="container">
+         <h2>3. Finish and Verify</h2>
+         <label for="goal-name">Capability Name:</label>
+         <input type="text" id="goal-name" placeholder="e.g., Swap USDC for ETH on Main St DEX">
+         <button id="finish-btn" disabled>Finish Training & Verify Sequence</button>
+         <div id="outcome-message" class="outcome"></div>
+    </div>
+
+    <!-- Verification Modal -->
+    <div id="verification-modal" class="modal">
+        <div class="modal-content">
+            <h3>Verify Learned Sequence</h3>
+            <p>Okay, I learned the following sequence to achieve '<strong id="verify-goal-name"></strong>':</p>
+            <pre id="verification-summary">
+                <!-- Verification text will be inserted here -->
+            </pre>
+            <p>Does this sequence correctly represent the steps needed?</p>
+            <button id="verify-yes-btn">Yes, Correct!</button>
+            <button id="verify-no-btn">No, Incorrect (Discard)</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
